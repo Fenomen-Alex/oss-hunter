@@ -2,22 +2,12 @@
 
 Slash command for AI coding agents to discover and fix real open-source issues.
 
-## Supported agents
-
-- [OpenCode](https://github.com/anomalyco/opencode)
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-- [Codex CLI](https://github.com/openai/codex)
-- [Cursor](https://cursor.sh)
-- [Kimi Code](https://kimi.moonshot.cn)
+Supported agents: [OpenCode](https://github.com/anomalyco/opencode) · [Claude Code](https://docs.anthropic.com/en/docs/claude-code) · [Codex CLI](https://github.com/openai/codex) · [Cursor](https://cursor.sh) · [Kimi Code](https://kimi.moonshot.cn)
 
 ## Quick install
 
-Run the install script:
-
 ```bash
-git clone https://github.com/<your-username>/oss-hunter.git
-cd oss-hunter
-./install.sh
+curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/install.sh | bash
 ```
 
 Or install per agent below.
@@ -26,47 +16,33 @@ Or install per agent below.
 
 ### Claude Code
 
-**Official marketplace** (recommended):
+**From marketplace:** `/plugin install oss-hunter@claude-plugins-official`
 
-```
-/plugin install oss-hunter@claude-plugins-official
-```
-
-**Or from repo:**
-
-```
-/plugin install https://github.com/<your-username>/oss-hunter
-```
+**From repo:** `/plugin install https://github.com/Fenomen-Alex/oss-hunter`
 
 ---
 
 ### OpenCode
 
-Add to your `opencode.json`:
+Add to `opencode.json`:
 
 ```json
 {
-  "plugin": ["oss-hunter@git+https://github.com/<your-username>/oss-hunter.git"]
+  "plugin": ["oss-hunter@git+https://github.com/Fenomen-Alex/oss-hunter.git"]
 }
 ```
-
-Restart OpenCode. The plugin registers `/oss-hunter` automatically.
+Restart.
 
 ---
 
 ### Codex CLI
 
-**Official marketplace** (recommended):
+**From marketplace:** `/plugins` search "oss-hunter"
 
-```
-/plugins
-```
-Search for "oss-hunter" and install.
-
-**Or from repo:**
-```
+**From repo:**
+```bash
 mkdir -p ~/.codex/commands
-cp .codex-plugin/oss-hunter.md ~/.codex/commands/
+curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.codex-plugin/oss-hunter.md -o ~/.codex/commands/oss-hunter.md
 ```
 
 ---
@@ -77,24 +53,16 @@ cp .codex-plugin/oss-hunter.md ~/.codex/commands/
 /add-plugin oss-hunter
 ```
 
-Or search for "oss-hunter" in Cursor's plugin marketplace.
-
 ---
 
 ### Kimi Code
 
-Open Kimi Code's plugin manager:
+**From marketplace:** `/plugins` > Marketplace > OSS Hunter
 
-```
-/plugins
-```
-
-Go to **Marketplace** > **OSS Hunter** and install.
-
-**Or from repo:**
-```
+**From repo:**
+```bash
 mkdir -p ~/.kimi/commands
-cp .kimi-plugin/commands/oss-hunter.md ~/.kimi/commands/
+curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-plugin/commands/oss-hunter.md -o ~/.kimi/commands/oss-hunter.md
 ```
 
 ---

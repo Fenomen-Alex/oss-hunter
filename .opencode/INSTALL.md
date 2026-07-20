@@ -6,7 +6,7 @@ Add oss-hunter to the `plugin` array in your `opencode.json` (global or project-
 
 ```json
 {
-  "plugin": ["oss-hunter@git+https://github.com/<your-username>/oss-hunter.git"]
+  "plugin": ["oss-hunter@git+https://github.com/Fenomen-Alex/oss-hunter.git"]
 }
 ```
 
@@ -16,6 +16,6 @@ To pin a specific version:
 
 ```json
 {
-  "plugin": ["oss-hunter@git+https://github.com/<your-username>/oss-hunter.git#v0.1.0"]
+  "plugin": ["oss-hunter@git+https://github.com/Fenomen-Alex/oss-hunter.git#v0.1.0"]
 }
 ```
