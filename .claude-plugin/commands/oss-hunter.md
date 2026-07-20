@@ -1,5 +1,5 @@
 ---
-description: Find and fix open source issues interactively
+description: Find and fix open source issues interactively. Search by repo stars (default) or recent activity.
 allowed-tools: Bash(git:*, gh:*, npm:*, npx:*, yarn:*, pnpm:*, playwright:*), Read, Write, Edit, WebSearch, grep
 ---
 
@@ -8,8 +8,9 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 ## Step 0: Parse arguments
 - Read the user's message after `/oss-hunter`. Extract:
   - **keywords**: a list of languages, frameworks, or topics (e.g. `js`, `typescript`, `react`, `go`)
-  - **limit**: an optional integer after the keywords (e.g. `20`). If not provided, default to **5**. If provided but >25, cap it to **25**.
-  Example: `/oss-hunter js, ts, go, express, node, nest, next 20` -> keywords: `js ts go express node nest next`, limit: 20.
+  - **limit**: use `--limit N` flag. If not provided, default to **5**. If provided but >25, cap it to **25**.
+  - **sort**: use `--sort stars` or `--sort updated`. Default to **stars** (by repo popularity). `--sort updated` sorts by most recently updated.
+  Example: `/oss-hunter js, ts, go, express, node, nest, next --limit 20 --sort stars` -> keywords: `js ts go express node nest next`, limit: 20, sort: stars.
 
 ## Step 1: Ensure working directory `oss-projects`
 - Check if a directory named `oss-projects` exists in the current working directory.
@@ -17,15 +18,24 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
   - If it does **not** exist, create it with `mkdir oss-projects` and then navigate into it.
 
 ## Step 2: Find open issues by keywords
-- Perform a **web search** (or use the GitHub API with a personal access token if available) to find **open, beginner-friendly issues** that match the given keywords.
-  - Search query construction:
-    `"good first issue" OR "help wanted" OR "up for grabs" label:bug ...` combined with the keywords.
-  - Alternative: use `gh search issues` command (requires `gh` CLI):
-    `gh search issues "good first issue" --label "bug" --language=<lang> --limit=<limit*2> --json number,title,repository,url`
-    Parse the JSON output and filter by keyword relevance.
-- **Relevancy ranking**: prioritise issues from repositories with higher stars, recent commits, and that directly match multiple keywords. Discard spammy/abandoned repos.
+- Use `gh search issues` to find open, beginner-friendly issues matching the keywords.
+  - Construct the search query: combine keywords with `"good first issue" OR "help wanted"` and filter for open issues.
+
+  - **If `--sort stars`** (default):
+    First, use `gh search repos` to find popular repos matching the keywords:
+    `gh search repos "<keywords>" --sort stars --limit 20 --json nameWithOwner,stargazerCount`
+    Then for each popular repo, check for open beginner-friendly issues:
+    `gh search issues "good first issue" "help wanted" --repo <owner/repo> --state open --limit 5 --json number,title,url,repository`
+    Collect results until you have enough, prioritizing repos with more stars.
+
+  - **If `--sort updated`**:
+    `gh search issues "good first issue" "help wanted" <keywords> --state open --limit <limit*2> --json number,title,repository,url,updatedAt,state`
+    Sort results by `updatedAt` descending.
+
+- **Relevancy ranking**: for stars mode, repos are already sorted by popularity. For updated mode, sort by most recent activity. Discard spammy/abandoned repos (no commits in 2+ years, very few stars, suspicious descriptions).
+
 - Collect up to **`limit`** distinct issues. Each entry must include:
-  - Repository full name (e.g. `expressjs/express`)
+  - Repository full name (e.g. `expressjs/express`) with star count
   - Issue number and title
   - Issue URL
   - A short snippet of the issue description
