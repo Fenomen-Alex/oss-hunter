@@ -1,0 +1,20 @@
+{
+  "name": "oss-hunter",
+  "displayName": "OSS Hunter",
+  "description": "Find and fix open source issues from your AI coding agent",
+  "version": "0.1.0",
+  "author": {
+    "name": "OSS Hunter"
+  },
+  "homepage": "https://github.com/<your-username>/oss-hunter",
+  "repository": "https://github.com/<your-username>/oss-hunter",
+  "license": "MIT",
+  "keywords": [
+    "oss",
+    "open-source",
+    "contribution",
+    "issues",
+    "slash-command"
+  ],
+  "commands": "./.cursor-plugin/oss-hunter.md"
+}

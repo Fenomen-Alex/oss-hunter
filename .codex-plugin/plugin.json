@@ -1,0 +1,27 @@
+{
+  "name": "oss-hunter",
+  "version": "0.1.0",
+  "description": "Slash command to discover and fix open-source issues. Search issues by keyword, clone repos, implement fixes, and create PRs.",
+  "author": {
+    "name": "OSS Hunter"
+  },
+  "homepage": "https://github.com/<your-username>/oss-hunter",
+  "repository": "https://github.com/<your-username>/oss-hunter",
+  "license": "MIT",
+  "keywords": [
+    "oss",
+    "open-source",
+    "contribution",
+    "issues",
+    "slash-command"
+  ],
+  "interface": {
+    "displayName": "OSS Hunter",
+    "shortDescription": "Find and fix open source issues",
+    "longDescription": "Use /oss-hunter to search for beginner-friendly open-source issues by keyword, clone the repo, analyze the codebase, implement fixes with testing, and create pull requests.",
+    "developerName": "OSS Hunter",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "websiteURL": "https://github.com/<your-username>/oss-hunter"
+  }
+}

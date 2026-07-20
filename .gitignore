@@ -1,5 +1,29 @@
-node_modules/
+# OS
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Language/runtime
+node_modules/
 *.log
 dist/
 .env
+*.pyc
+__pycache__/
+.gradle/
+build/
+target/
+*.class
+*.o
+*.exe
+
+# Misc
+*.tgz
+*.tar.gz
