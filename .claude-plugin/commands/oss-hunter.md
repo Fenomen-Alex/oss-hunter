@@ -14,7 +14,8 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
   Example (shorthand): `/oss-hunter js 10 stars` -> keywords: `js`, limit: 10, sort: stars.
 
 ## Step 1: Ensure working directory `oss-projects`
-- Check if a directory named `oss-projects` exists in the current working directory.
+- Check if the current working directory's basename is `oss-projects`. If so, you are already inside it - stay there.
+- If not, check if a directory named `oss-projects` exists in the current working directory.
   - If it exists, navigate into it (all subsequent file operations happen inside `oss-projects`).
   - If it does **not** exist, create it with `mkdir oss-projects` and then navigate into it.
 
