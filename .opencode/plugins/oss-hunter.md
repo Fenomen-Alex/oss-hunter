@@ -10,9 +10,10 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 ## Step 0: Parse arguments
 - Read the user's message after `/oss-hunter`. Extract:
   - **keywords**: a list of languages, frameworks, or topics (e.g. `js`, `typescript`, `react`, `go`)
-  - **limit**: use `--limit N` flag. If not provided, default to **5**. If provided but >25, cap it to **25**.
-  - **sort**: use `--sort stars` or `--sort updated`. Default to **stars** (by repo popularity). `--sort updated` sorts by most recently updated.
-  Example: `/oss-hunter js, ts, go, express, node, nest, next --limit 20 --sort stars` -> keywords: `js ts go express node nest next`, limit: 20, sort: stars.
+  - **limit**: use `--limit N` flag, or a bare integer at the end after keywords (e.g. `/oss-hunter js 10`). If not provided, default to **5**. If provided but >25, cap it to **25**.
+  - **sort**: use `--sort stars` or `--sort updated`. If the last bare word after keywords is `stars` or `updated`, treat it as sort mode. Default to **stars** (by repo popularity).
+  Example: `/oss-hunter js, ts, go --limit 20 --sort stars` -> keywords: `js ts go`, limit: 20, sort: stars.
+  Example (shorthand): `/oss-hunter js 10 stars` -> keywords: `js`, limit: 10, sort: stars.
 
 ## Step 1: Ensure working directory `oss-projects`
 - Check if a directory named `oss-projects` exists in the current working directory.
