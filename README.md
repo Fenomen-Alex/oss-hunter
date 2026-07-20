@@ -69,10 +69,15 @@ curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-pl
 Inside your agent chat, type:
 
 ```
-/oss-hunter react, typescript, tailwind 10
+/oss-hunter react, typescript, tailwind --limit 10 --sort stars
 ```
 
 The agent will guide you through finding, fixing, and PR-ing a real open-source issue.
+
+**Options:**
+- `--limit N` - number of issues to show (default 5, max 25)
+- `--sort stars` - sort by repo popularity/stars (default)
+- `--sort updated` - sort by most recently updated
 
 ## Prerequisites
 
