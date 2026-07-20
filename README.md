@@ -24,12 +24,9 @@ Or install per agent below.
 
 ### OpenCode
 
-Add to `opencode.json`:
-
-```json
-{
-  "plugin": ["oss-hunter@git+https://github.com/Fenomen-Alex/oss-hunter.git"]
-}
+```bash
+mkdir -p ~/.config/opencode/commands
+curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.opencode/plugins/oss-hunter.md -o ~/.config/opencode/commands/oss-hunter.md
 ```
 Restart.
 

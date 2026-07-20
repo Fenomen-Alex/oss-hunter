@@ -7,14 +7,27 @@ BRANCH="main"
 echo "=== OSS Hunter Installer ==="
 echo ""
 
-# Download a single file from the repo without cloning
+# Prefer local files if script is run from repo checkout, else fetch from GitHub
+if [ -f "$(dirname "$0")/.opencode/plugins/oss-hunter.md" ]; then
+  SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
+  echo "Installing from local checkout: $SRC_DIR"
+  echo ""
+else
+  SRC_DIR=""
+  echo "Installing from GitHub..."
+  echo ""
+fi
+
 fetch() {
   local src="$1" dst="$2"
   mkdir -p "$(dirname "$dst")"
-  curl -sL "https://raw.githubusercontent.com/$REPO/$BRANCH/$src" -o "$dst"
+  if [ -n "$SRC_DIR" ]; then
+    cp "$SRC_DIR/$src" "$dst"
+  else
+    curl -sL "https://raw.githubusercontent.com/$REPO/$BRANCH/$src" -o "$dst"
+  fi
 }
 
-# Temporary directory for command files
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 
@@ -23,7 +36,6 @@ fetch ".claude-plugin/commands/oss-hunter.md"  "$TMPDIR/claude/oss-hunter.md"
 fetch ".codex-plugin/oss-hunter.md"            "$TMPDIR/codex/oss-hunter.md"
 fetch ".kimi-plugin/commands/oss-hunter.md"    "$TMPDIR/kimi/oss-hunter.md"
 
-# Detect agents
 INSTALLED=()
 command -v opencode &>/dev/null && INSTALLED+=("opencode")
 command -v claude &>/dev/null   && INSTALLED+=("claude")
@@ -45,12 +57,10 @@ for agent in "${INSTALLED[@]}"; do
   case "$agent" in
     opencode)
       CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
-      PLUGIN_DIR="$CONFIG_DIR/plugins"
-      mkdir -p "$PLUGIN_DIR"
-      cp "$TMPDIR/opencode/oss-hunter.md" "$PLUGIN_DIR/"
-      echo "  [OK] OpenCode: copied to $PLUGIN_DIR/oss-hunter.md"
-      echo "       Add to opencode.json:"
-      echo '       "plugin": ["oss-hunter@git+https://github.com/Fenomen-Alex/oss-hunter.git"]'
+      COMMAND_DIR="$CONFIG_DIR/commands"
+      mkdir -p "$COMMAND_DIR"
+      cp "$TMPDIR/opencode/oss-hunter.md" "$COMMAND_DIR/"
+      echo "  [OK] OpenCode: copied to $COMMAND_DIR/oss-hunter.md"
       echo ""
       ;;
     claude)
@@ -70,9 +80,8 @@ for agent in "${INSTALLED[@]}"; do
   esac
 done
 
-# Kimi instructions
 echo "---"
-echo "Kimi Code: copy the file manually:"
+echo "Kimi Code:"
 echo "  mkdir -p ~/.kimi/commands"
 echo "  curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-plugin/commands/oss-hunter.md -o ~/.kimi/commands/oss-hunter.md"
 echo ""
