@@ -58,10 +58,32 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 - Wait for the user's response. If they type "none" or cancel, stop the workflow.
 - Validate the selection and note the chosen repository and issue.
 
-## Step 4: Clone the repository
-- Inside `oss-projects/`, clone the chosen repository:
-  `gh repo clone <owner/repo>` (preferred because it uses SSH/HTTPS already configured) or `git clone https://github.com/<owner>/<repo>.git`.
+## Step 4: Clone the repository and handle contribution flow
+- Inside `oss-projects/`, clone the chosen repository.
+- **Before cloning, check contribution rules**:
+  - Look for `CONTRIBUTING.md` or `CONTRIBUTING` in the repo root (fetch from GitHub without cloning first):
+    `curl -sL https://raw.githubusercontent.com/<owner>/<repo>/main/CONTRIBUTING.md | head -100`
+    If that fails, try `/master/` instead of `/main/`.
+  - Read the contribution guide carefully. Extract:
+    - **Forking policy**: does it require forking? (almost always yes for external contributors)
+    - **Branch naming convention**: e.g. `fix/issue-1234`, `feature/...`, `<username>/fix-...`
+    - **Commit message style**: conventional commits? `fix: ...` / `feat: ...`? Must reference issue?
+    - **PR requirements**: signed commits? linked issue? changelog entry?特定のPR template?
+    - **Code style**: linter/formatter to run? (e.g. `npm run lint`, `prettier`, `black`, `gofmt`)
+    - **Testing requirements**: must all tests pass? must add tests?
+  - If no CONTRIBUTING.md exists, use these sensible defaults:
+    - Fork the repo
+    - Branch name: `fix/issue-<number>-<short-description>`
+    - Commit messages: conventional commits (`fix: ...`, `feat: ...`) with issue reference
+    - Run linter if config found, ensure tests pass
+- **Fork or clone based on contribution rules**:
+  - If you have push access OR the repo allows direct branches: clone directly with `gh repo clone <owner/repo>`.
+  - If forking is required (default): first fork via `gh repo fork <owner/repo> --clone=false`, then clone your fork:
+    `gh repo clone <your-username>/<repo>` (or `git clone https://github.com/<your-username>/<repo>.git`)
+  - After cloning your fork, set the upstream remote: `git remote add upstream https://github.com/<owner>/<repo>.git`
 - Navigate into the freshly cloned directory.
+- Create a new branch following the repo's naming convention:
+  `git checkout -b <branch-name>`
 
 ## Step 5: Analyse the repository and understand the issue
 - Read the issue description carefully (fetch it via `gh issue view <number> --repo <owner/repo>` or from the stored data).
@@ -111,10 +133,18 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 ## Step 10: Create the pull request
 - Ensure the **GitHub CLI (`gh`)** is installed and authenticated:
   - Check with `gh auth status`. If it fails, instruct the user to install `gh` (https://cli.github.com/) and run `gh auth login`. Wait until successful.
-- **Fork the repository** if the user does not have push access (the plugin will check):
-  `gh repo fork <owner/repo> --clone=false` (since we already cloned). This adds a remote named `upstream` or `origin` depending on config. Ensure the remote for the user's fork is correctly set.
-- Push the branch: `git push -u origin <current-branch>`.
-- Create the PR: `gh pr create --title "fix: ..." --body "Closes #1234. ..." --base main --head <user>:<branch>`.
+- **If you cloned the repo directly (not a fork)**:
+  - Check if you have push access: `gh api repos/<owner>/<repo>/collaborators/<your-username>/permission | jq .permission`
+  - If permission is "admin" or "write", push directly: `git push -u origin <current-branch>`
+  - If not (or if forking was required in Step 4), fork first: `gh repo fork <owner>/<repo> --clone=false`
+  - Add your fork as a remote: `git remote add myfork https://github.com/<your-username>/<repo>.git`
+  - Push: `git push -u myfork <current-branch>`
+- **If you already cloned your fork** (from Step 4):
+  - Push: `git push -u origin <current-branch>`
+- Create the PR against the upstream repo:
+  `gh pr create --title "fix: ..." --body "Closes #<issue-number>.\n\n<brief description of changes>" --base main --head <your-username>:<branch>`
+  - If the upstream uses a different default branch (e.g. `master`, `develop`), target that instead of `main`.
+  - If the repo has a PR template, `gh` will pick it up automatically - review and fill it in.
 - Display the PR URL to the user.
 
 ## Critical rules

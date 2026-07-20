@@ -27,6 +27,7 @@ Or install per agent below.
 ```bash
 mkdir -p ~/.config/opencode/commands
 curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.opencode/plugins/oss-hunter.md -o ~/.config/opencode/commands/oss-hunter.md
+curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.opencode/plugins/oss-issue.md -o ~/.config/opencode/commands/oss-issue.md
 ```
 Restart.
 
@@ -40,6 +41,7 @@ Restart.
 ```bash
 mkdir -p ~/.codex/commands
 curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.codex-plugin/oss-hunter.md -o ~/.codex/commands/oss-hunter.md
+curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.codex-plugin/oss-issue.md -o ~/.codex/commands/oss-issue.md
 ```
 
 ---
@@ -60,6 +62,7 @@ curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.codex-p
 ```bash
 mkdir -p ~/.kimi/commands
 curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-plugin/commands/oss-hunter.md -o ~/.kimi/commands/oss-hunter.md
+curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-plugin/commands/oss-issue.md -o ~/.kimi/commands/oss-issue.md
 ```
 
 ---
@@ -69,15 +72,26 @@ curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-pl
 Inside your agent chat, type:
 
 ```
+# Search by keywords
 /oss-hunter react, typescript, tailwind --limit 10 --sort stars
+
+# Work from a specific issue URL
+/oss-issue https://github.com/vercel/next.js/issues/84616
 ```
 
-The agent will guide you through finding, fixing, and PR-ing a real open-source issue.
-
-**Options:**
+**Options for `/oss-hunter`:**
 - `--limit N` - number of issues to show (default 5, max 25)
 - `--sort stars` - sort by repo popularity/stars (default)
 - `--sort updated` - sort by most recently updated
+
+## How it works
+
+1. You provide keywords or a direct issue URL
+2. The agent reads the project's CONTRIBUTING.md to determine fork/branch/commit conventions
+3. The agent clones (or forks + clones) the repository
+4. The codebase is analyzed and a fix plan is proposed
+5. After approval, the agent implements the fix and runs tests
+6. The agent creates a pull request honoring the project's guidelines
 
 ## Prerequisites
 
@@ -102,19 +116,25 @@ oss-hunter/
 ├── install.sh                    # Auto-install script
 ├── .opencode/                    # OpenCode plugin
 │   ├── INSTALL.md
-│   └── plugins/oss-hunter.md
+│   ├── plugins/oss-hunter.md
+│   └── plugins/oss-issue.md
 ├── .claude-plugin/               # Claude Code plugin
 │   ├── plugin.json
 │   ├── marketplace.json
-│   └── commands/oss-hunter.md
+│   └── commands/
+│       ├── oss-hunter.md
+│       └── oss-issue.md
 ├── .cursor-plugin/               # Cursor plugin
 │   └── plugin.json
 ├── .codex-plugin/                # Codex CLI plugin
 │   ├── plugin.json
-│   └── oss-hunter.md
+│   ├── oss-hunter.md
+│   └── oss-issue.md
 └── .kimi-plugin/                 # Kimi Code plugin
     ├── plugin.json
-    └── commands/oss-hunter.md
+    └── commands/
+        ├── oss-hunter.md
+        └── oss-issue.md
 ```
 
 ## Plugin marketplaces
