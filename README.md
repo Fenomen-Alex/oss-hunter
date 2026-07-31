@@ -105,9 +105,19 @@ Inside your agent chat, type:
 2. The agent searches for open, beginner-friendly issues matching your keywords
 3. You pick an issue to work on
 4. The agent clones the repository and analyzes the codebase
-5. A fix plan is proposed for your review
-6. After approval, the agent implements the fix and runs tests
-7. The agent creates a pull request with your changes
+5. **Contribution guide analysis**: The agent fetches and analyzes the repository's contribution requirements
+6. A fix plan is proposed for your review
+7. After approval, the agent implements the fix and runs tests
+8. The agent creates a pull request with your changes
+
+### Contribution Guide Analysis
+
+When working on an issue, the plugin automatically analyzes the target repository's contribution guide and provides:
+
+- **Contribution requirements summary**: Forking policy, branch naming, commit style, CLA/DCO, PR template, code style, testing requirements
+- **Potential improvements**: Suggestions for improving the repository's contribution process
+
+This ensures you follow the project's conventions and helps maintainers improve their contribution guidelines.
 
 ## Directory structure
 

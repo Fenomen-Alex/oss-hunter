@@ -33,8 +33,15 @@ You are an expert open-source contributor. When the user invokes `/oss-issue`, y
 - Inside `oss-projects/`, clone the chosen repository.
 - **Before cloning, check contribution rules**:
   - Look for `CONTRIBUTING.md` or `CONTRIBUTING` in the repo root (fetch from GitHub without cloning first):
-    `curl -sL https://raw.githubusercontent.com/<owner>/<repo>/main/CONTRIBUTING.md | head -100`
+    `curl -sL https://raw.githubusercontent.com/<owner>/<repo>/main/CONTRIBUTING.md | head -200`
     If that fails, try `/master/` instead of `/main/`.
+  - Also check for these additional contribution-related files:
+    - `CODE_OF_CONDUCT.md` - indicates community standards
+    - `SECURITY.md` - vulnerability reporting process
+    - `.github/PULL_REQUEST_TEMPLATE.md` - PR template requirements
+    - `.github/ISSUE_TEMPLATE/` - issue templates
+    - `DCO` or `DeveloperCertificateOfOrigin` - DCO sign-off requirements
+    - `CLA` or `ContributorLicenseAgreement` - CLA requirements
   - Read the contribution guide carefully. Extract:
     - **Forking policy**: does it require forking? (almost always yes for external contributors)
     - **Branch naming convention**: e.g. `fix/issue-1234`, `feature/...`, `<username>/fix-...`
@@ -42,14 +49,50 @@ You are an expert open-source contributor. When the user invokes `/oss-issue`, y
     - **PR requirements**: signed commits? linked issue? changelog entry? PR template?
     - **Code style**: linter/formatter to run (e.g. `npm run lint`, `prettier`, `black`, `gofmt`)
     - **Testing requirements**: must all tests pass? must add tests?
+    - **CLA/DCO requirements**: is a CLA or DCO sign-off required?
+    - **Review process**: how many approvals needed? review timeline?
+    - **Labels/conventions**: any specific labels to use?
   - If no CONTRIBUTING.md exists, use these sensible defaults:
     - Fork the repo
     - Branch name: `fix/issue-<number>-<short-description>`
     - Commit messages: conventional commits (`fix: ...`, `feat: ...`) with issue reference
     - Run linter if config found, ensure tests pass
+- **Present contribution analysis to user**:
+  Display a summary of contribution requirements:
+  ```
+  Contribution Analysis for <owner>/<repo>:
+  ┌─────────────────────────┬─────────────────────────────────────┐
+  │ Requirement             │ Details                             │
+  ├─────────────────────────┼─────────────────────────────────────┤
+  │ Forking Required        │ Yes/No                              │
+  │ Branch Naming           │ <convention>                        │
+  │ Commit Style            │ <style>                             │
+  │ CLA/DCO                 │ Required/Not Required/Unknown       │
+  │ PR Template             │ Yes/No                              │
+  │ Code Style              │ <tools>                             │
+  │ Testing                 │ <requirements>                      │
+  └─────────────────────────┴─────────────────────────────────────┘
+  ```
+- **Identify Potential Improvements** for the repository's contribution process:
+  - If CONTRIBUTING.md is missing or incomplete
+  - If no CLA/DCO is in place (suggest adding for legal clarity)
+  - If no PR template exists (suggest adding for consistency)
+  - If no issue templates exist (suggest adding for better triage)
+  - If testing requirements are unclear
+  - If code style/linting is not documented
+  Present these as suggestions:
+  ```
+  Potential Improvements for <owner>/<repo>:
+  • [ ] Add CONTRIBUTING.md (currently missing/incomplete)
+  • [ ] Add CLA/DCO for legal clarity
+  • [ ] Add PR template for consistent PR descriptions
+  • [ ] Add issue templates for better triage
+  • [ ] Document testing requirements
+  • [ ] Document code style/linting configuration
+  ```
 - **Fork or clone based on contribution rules**:
-  - If you have push access OR the repo allows direct branches: clone directly with `gh repo clone <owner>/<repo>`.
-  - If forking is required (default): first fork via `gh repo fork <owner>/<repo> --clone=false`, then clone your fork:
+  - If you have push access OR the repo allows direct branches: clone directly with `gh repo clone <owner/<repo>`.
+  - If forking is required (default): first fork via `gh repo fork <owner/<repo> --clone=false`, then clone your fork:
     `gh repo clone <your-username>/<repo>`
     Then set upstream: `git remote add upstream https://github.com/<owner>/<repo>.git`
 - Navigate into the freshly cloned directory.
