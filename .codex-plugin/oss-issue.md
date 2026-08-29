@@ -14,11 +14,12 @@ You are an expert open-source contributor. When the user invokes `/oss-issue`, y
   - **issue_number**: the issue number (e.g. `1234`)
 - Validate the URL format. If it doesn't match `https://github.com/<owner>/<repo>/issues/<number>`, inform the user and stop.
 
-## Step 1: Ensure working directory `oss-projects`
-- Check if the current working directory's basename is `oss-projects`. If so, you are already inside it - stay there.
-- If not, check if a directory named `oss-projects` exists in the current working directory.
-  - If it exists, navigate into it (all subsequent file operations happen inside `oss-projects`).
-  - If it does **not** exist, create it with `mkdir oss-projects` and then navigate into it.
+## Step 1: Use a dedicated workspace outside the current project: `~/oss-projects`
+- **Critical**: Never create or clone anything inside the user's current project/repository. Always work in a dedicated workspace in the home directory, so you never create nested git repos inside the user's project (which breaks their IDE/VCS).
+- Resolve the workspace path as `$HOME/oss-projects` (i.e. `~/oss-projects`).
+- If the current working directory is `~/oss-projects` (or any subdirectory of it), stay where you are.
+- Otherwise: ensure `~/oss-projects` exists with `mkdir -p ~/oss-projects`, then navigate into it with `cd ~/oss-projects`.
+- All subsequent operations (clone, fork, edits, branches) happen inside `~/oss-projects`.
 
 ## Step 2: Fetch the issue details
 - Fetch the issue description:

@@ -24,11 +24,12 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
      - Ask the user: *"Would you like to save this as your default profile in ~/.config/oss-hunter/config.json? (yes/no)"*
      - If they agree, create the directory `~/.config/oss-hunter/` if needed, and write the profile in JSON format: `{"skills": ["react", "typescript", ...], "updatedAt": "..."}`.
 
-## Step 1: Ensure working directory `oss-projects`
-- Check if the current working directory's basename is `oss-projects`. If so, you are already inside it - stay there.
-- If not, check if a directory named `oss-projects` exists in the current working directory.
-  - If it exists, navigate into it (all subsequent file operations happen inside `oss-projects`).
-  - If it does **not** exist, create it with `mkdir oss-projects` and then navigate into it.
+## Step 1: Use a dedicated workspace outside the current project: `~/oss-projects`
+- **Critical**: Never create or clone anything inside the user's current project/repository. Always work in a dedicated workspace in the home directory, so you never create nested git repos inside the user's project (which breaks their IDE/VCS).
+- Resolve the workspace path as `$HOME/oss-projects` (i.e. `~/oss-projects`).
+- If the current working directory is `~/oss-projects` (or any subdirectory of it), stay where you are.
+- Otherwise: ensure `~/oss-projects` exists with `mkdir -p ~/oss-projects`, then navigate into it with `cd ~/oss-projects`.
+- All subsequent operations (clone, fork, edits, branches) happen inside `~/oss-projects`.
 
 ## Step 2: Find open issues by keywords
 - Use the **keywords** and active **Skill Profile** to find open, beginner-friendly issues.

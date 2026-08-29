@@ -104,11 +104,13 @@ Inside your agent chat, type:
 1. You provide keywords and an optional limit
 2. The agent searches for open, beginner-friendly issues matching your keywords
 3. You pick an issue to work on
-4. The agent clones the repository and analyzes the codebase
+4. The agent clones the repository into a dedicated workspace at `~/oss-projects` and analyzes the codebase
 5. **Contribution guide analysis**: The agent fetches and analyzes the repository's contribution requirements
 6. A fix plan is proposed for your review
 7. After approval, the agent implements the fix and runs tests
 8. The agent creates a pull request with your changes
+
+> **Workspace location**: All cloned/forked repos are created under `~/oss-projects` (your home directory), never inside your current project — so the tool never nests a git repo inside your own project or messes with your IDE's version control.
 
 ### Contribution Guide Analysis
 
