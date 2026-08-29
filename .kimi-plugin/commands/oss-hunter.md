@@ -1,6 +1,6 @@
 ---
 name: oss-hunter
-description: Find and fix OSS issues. Search by repo stars (default) or recently updated.
+description: Find and fix OSS issues. Sort by repo stars (default) or recently updated. Supports --skills/--stack and personalized search.
 ---
 
 You are an expert open-source contributor. When the user invokes `/oss-hunter`, you execute the following steps **interactively and precisely**.
@@ -8,10 +8,23 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 ## Step 0: Parse arguments
 - Read the user's message after `/oss-hunter`. Extract:
   - **keywords**: a list of languages, frameworks, or topics (e.g. `js`, `typescript`, `react`, `go`)
+  - **skills** / **stack**: extract via `--skills <list>` or `--stack <list>` flag (e.g., `--skills react,redux,typescript,antd`).
   - **limit**: use `--limit N` flag, or a bare integer at the end after keywords (e.g. `/oss-hunter js 10`). If not provided, default to **5**. If provided but >25, cap it to **25**.
   - **sort**: use `--sort stars` or `--sort updated`. If the last bare word after keywords is `stars` or `updated`, treat it as sort mode. Default to **stars** (by repo popularity).
   Example: `/oss-hunter js, ts, go --limit 20 --sort stars` -> keywords: `js ts go`, limit: 20, sort: stars.
   Example (shorthand): `/oss-hunter js 10 stars` -> keywords: `js`, limit: 10, sort: stars.
+  Example (with skills): `/oss-hunter --skills react,redux,typescript,antd --limit 10` -> skills: `react,redux,typescript,antd`, limit: 10.
+
+## Step 0.5: Determine Skill Profile & Preferences
+- Define a **Skill Profile** (representing the user's skillset and framework preferences) to filter and focus search results.
+- Resolve the Skill Profile as follows:
+  1. **Direct parameter**: If `--skills` or `--stack` was provided in Step 0, parse it as a list and use it as the active Skill Profile.
+  2. **Global Config**: If no skills are explicitly provided, check if a global profile exists at `~/.config/oss-hunter/config.json`. If it does, load the saved skills as the active Skill Profile.
+  3. **Interactive Prompt**: If no skills/keywords are specified and no global profile exists:
+     - Ask the user: *"What is your preferred tech stack/skills? (e.g. react, typescript, redux, antd)"*
+     - Use the user's response as the active Skill Profile.
+     - Ask the user: *"Would you like to save this as your default profile in ~/.config/oss-hunter/config.json? (yes/no)"*
+     - If they agree, create the directory `~/.config/oss-hunter/` if needed, and write the profile in JSON format: `{"skills": ["react", "typescript", ...], "updatedAt": "..."}`.
 
 ## Step 1: Ensure working directory `oss-projects`
 - Check if the current working directory's basename is `oss-projects`. If so, you are already inside it - stay there.
@@ -20,19 +33,22 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
   - If it does **not** exist, create it with `mkdir oss-projects` and then navigate into it.
 
 ## Step 2: Find open issues by keywords
-- Use `gh search issues` to find open, beginner-friendly issues matching the keywords.
-  - Construct the search query: combine keywords with `"good first issue" OR "help wanted"` and filter for open issues.
+- Use the **keywords** and active **Skill Profile** to find open, beginner-friendly issues.
+- If no keywords were explicitly provided but a Skill Profile is active, use the terms from the Skill Profile as the search keywords.
+- Combine the search query: search for `"good first issue" OR "help wanted"` and filter for open issues.
 
   - **If `--sort stars`** (default):
-    First, use `gh search repos` to find popular repos matching the keywords:
-    `gh search repos "<keywords>" --sort stars --limit 20 --json nameWithOwner,stargazerCount`
-    Then for each popular repo, check for open beginner-friendly issues:
-    `gh search issues "good first issue" "help wanted" --repo <owner/repo> --state open --limit 5 --json number,title,url,repository`
+    First, use `gh search repos` to find popular repos matching the keywords and active skills:
+    `gh search repos "<keywords> <skills>" --sort stars --limit 20 --json nameWithOwner,stargazerCount,primaryLanguage,description`
+    - Filter the repository list to prioritize highly-starred, reputable open-source projects or major ecosystem projects that align with the active Skill Profile (e.g. if the user's stack includes React and Material UI, prioritize repos matching `mui/material-ui`, `facebook/react`, `reduxjs/redux`, `ant-design/ant-design`).
+    - Discard obscure or low-quality personal repos that happen to match the keywords but have very few stars or no activity.
+    - Then for each popular repo, check for open beginner-friendly issues:
+      `gh search issues "good first issue" "help wanted" --repo <owner/repo> --state open --limit 5 --json number,title,url,repository`
     Collect results until you have enough, prioritizing repos with more stars.
 
   - **If `--sort updated`**:
-    `gh search issues "good first issue" "help wanted" <keywords> --state open --limit <limit*2> --json number,title,repository,url,updatedAt,state`
-    Sort results by `updatedAt` descending.
+    `gh search issues "good first issue" "help wanted" <keywords> <skills> --state open --limit <limit*2> --json number,title,repository,url,updatedAt,state`
+    Sort results by `updatedAt` descending, and filter the issues to ensure the repository matches the active Skill Profile.
 
 - **Relevancy ranking**: for stars mode, repos are already sorted by popularity. For updated mode, sort by most recent activity. Discard spammy/abandoned repos (no commits in 2+ years, very few stars, suspicious descriptions).
 
