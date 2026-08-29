@@ -27,6 +27,19 @@ You are an expert open-source contributor. When the user invokes `/oss-issue`, y
 - Confirm: **"Shall I proceed to work on this issue? (yes/no)"**
 - If no, stop.
 
+## Step 2.5: Check for an existing pull request
+- Before doing any work, check whether there is already an opened pull request (or in-progress contribution) for this issue, so you don't duplicate someone else's effort.
+- Query GitHub for PRs that reference the issue:
+  - `gh search prs "Closes #<issue_number>" "Fixes #<issue_number>" "Resolves #<issue_number>" --repo <owner>/<repo> --state open --json number,title,url,author,state`
+  - Also search by the issue title: `gh search prs "<issue title>" --repo <owner>/<repo> --state open --json number,title,url`
+- If an associated open PR is found, inform the user clearly:
+  ```
+  Heads up! This issue already has an open pull request:
+  https://github.com/<owner>/<repo>/pull/<number> - "<PR title>" by <author>
+  ```
+- Ask the user how to proceed: **"Would you like to (1) work on the issue anyway / coordinate, (2) pick a different issue, or (3) stop?"**
+- If the user chooses to stop, end the workflow. If they choose to proceed despite the existing PR, continue to Step 3.
+
 ## Step 3: Clone the repository and handle contribution flow
 - Inside `oss-projects/`, clone the chosen repository.
 - **Before cloning, check contribution rules**:

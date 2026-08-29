@@ -74,6 +74,19 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 - Wait for the user's response. If they type "none" or cancel, stop the workflow.
 - Validate the selection and note the chosen repository and issue.
 
+## Step 3.5: Check for an existing pull request
+- Before doing any work, check whether there is already an opened pull request (or in-progress contribution) for the selected issue, so you don't duplicate someone else's effort.
+- Query GitHub for PRs that reference the issue:
+  - `gh search prs "Closes #<issue-number>" "Fixes #<issue-number>" "Resolves #<issue-number>" --repo <owner>/<repo> --state open --json number,title,url,author,state`
+  - Also search by the issue title: `gh search prs "<issue title>" --repo <owner>/<repo> --state open --json number,title,url`
+- If an associated open PR is found, inform the user clearly:
+  ```
+  Heads up! This issue already has an open pull request:
+  https://github.com/<owner>/<repo>/pull/<number> - "<PR title>" by <author>
+  ```
+- Ask the user how to proceed: **"Would you like to (1) work on the issue anyway / coordinate, (2) pick a different issue, or (3) stop?"**
+- If the user chooses a different issue, loop back to Step 3 and ask for a new selection. If they choose to stop, end the workflow.
+
 ## Step 4: Clone the repository and handle contribution flow
 - Inside `oss-projects/`, clone the chosen repository.
 - **Before cloning, check contribution rules**:
