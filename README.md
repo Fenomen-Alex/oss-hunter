@@ -121,6 +121,17 @@ When working on an issue, the plugin automatically analyzes the target repositor
 
 This ensures you follow the project's conventions and helps maintainers improve their contribution guidelines.
 
+### Pull request creation
+
+After the fix is implemented and tested, the plugin creates the pull request and then follows the contribution guide to apply PR metadata where possible:
+
+- **Labels**: applies labels only if the contribution guide specifies them (never invents labels)
+- **Reviewers**: requests reviewers if the guide names them; otherwise relies on the repo's automatic mechanisms (e.g. `CODEOWNERS`, auto-assign bots)
+- **Assignees**: assigns the issue to you as the author
+- **Cross-linking**: ensures the PR body references the issue (e.g. `Closes #N`)
+
+> As an external contributor, you usually can't set labels/reviewers/assignees on the upstream repo (only maintainers can). The plugin attempts them and reports which were applied and which were denied, without failing the workflow.
+
 ## Directory structure
 
 ```

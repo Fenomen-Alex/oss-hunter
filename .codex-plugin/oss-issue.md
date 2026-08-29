@@ -163,6 +163,12 @@ You are an expert open-source contributor. When the user invokes `/oss-issue`, y
   `gh pr create --title "fix: ..." --body "Closes #<issue_number>.\n\n<brief description>" --base main`
   - If upstream uses a different default branch, target that.
   - Fill in any PR template if `gh` picks one up.
+- **Apply contribution-guide metadata to the PR** (labels, reviewers, assignees) exactly as determined in Step 3. Note: as an external contributor you usually **cannot** set labels/reviewers/assignees on the upstream repo - only maintainers can. Attempt them anyway but **never fail the workflow** if they're denied; instead inform the user what was and wasn't applied.
+  - **Labels**: If the contribution guide (Step 3) specified labels to add, apply them: `gh pr edit <pr-number> --add-label "label1,label2" --repo <owner>/<repo>`. Otherwise skip - do not invent labels.
+  - **Reviewers**: If the contribution guide explicitly names reviewers, request them: `gh pr edit <pr-number> --add-reviewer <user1,user2> --repo <owner>/<repo>`. Otherwise rely on the repo's automatic mechanisms (e.g. `CODEOWNERS`, auto-assign bots) and do not guess reviewers.
+  - **Assignees**: Assign the issue to yourself as the author (do not assign maintainers to open issues/PRs they triage): `gh issue edit <issue_number> --add-assignee @me --repo <owner>/<repo>`.
+  - **Cross-link the PR**: ensure the PR body references the issue (e.g. `Closes #<issue_number>`) so GitHub links them; if the guide requires a changelog entry or a specific PR description format, honor it.
+- **Verify the PR state** after creation: `gh pr view <pr-number> --repo <owner>/<repo> --json title,labels,reviewRequests,assignees,url`. Report any metadata you could and could not set, and why (e.g. "no permission", "labels not configured in the guide").
 - Display the PR URL to the user.
 
 ## Critical rules
