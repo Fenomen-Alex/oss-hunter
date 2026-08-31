@@ -28,12 +28,12 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
      - Ask the user: *"Would you like to save this as your default profile in ~/.config/oss-hunter/config.json? (yes/no)"*
      - If they agree, create the directory `~/.config/oss-hunter/` if needed, and write the profile in JSON format: `{"skills": ["react", "typescript", ...], "updatedAt": "..."}`.
 
-## Step 1: Use a dedicated workspace outside the current project: `~/oss-projects`
-- **Critical**: Never create or clone anything inside the user's current project/repository. Always work in a dedicated workspace in the home directory, so you never create nested git repos inside the user's project (which breaks their IDE/VCS).
-- Resolve the workspace path as `$HOME/oss-projects` (i.e. `~/oss-projects`).
-- If the current working directory is `~/oss-projects` (or any subdirectory of it), stay where you are.
-- Otherwise: ensure `~/oss-projects` exists with `mkdir -p ~/oss-projects`, then navigate into it with `cd ~/oss-projects`.
-- All subsequent operations (clone, fork, edits, branches) happen inside `~/oss-projects`.
+## Step 1: Understand the global workspace model
+- **Critical**: The plugin NEVER clones into the user's current project/repository, and it NEVER nests git repos inside other git repos. That confuses the user's IDE (multiple VCS roots) and confuses the agent. All cloned/forked repos live in a single **global workspace** in the home directory.
+- The global workspace root is `$HOME/oss-projects` (i.e. `~/oss-projects`).
+- Each issue gets a **deterministic, globally-unique directory**: `~/oss-projects/<owner>-<repo>-issue-<issue-number>`.
+  - Because this path encodes the owner, repo, and issue number, the same issue always maps to the same directory **no matter where you invoke the command from or how deep you are in the filesystem**. This is the global deduplication mechanism.
+- You will only **find, select, clone, and hand off** in this command. The actual code analysis, fix, and PR creation happen in a **separate, fresh coding-agent session** run by `/oss-issue` directly inside the cloned directory.
 
 ## Step 2: Find open issues by keywords
 - Use the **keywords** and active **Skill Profile** to find open, beginner-friendly issues.
@@ -73,14 +73,24 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
   ```
 - Ask: **"Which issue would you like to work on? (enter number or 'none')"**
 - Wait for the user's response. If they type "none" or cancel, stop the workflow.
-- Validate the selection and note the chosen repository and issue.
+- Validate the selection and note the chosen repository, issue number, and issue URL.
 
-## Step 3.5: Check for an existing pull request
-- Before doing any work, check whether there is already an opened pull request (or in-progress contribution) for the selected issue, so you don't duplicate someone else's effort.
-- Query GitHub for PRs that reference the issue:
-  - `gh search prs "Closes #<issue-number>" "Fixes #<issue-number>" "Resolves #<issue-number>" --repo <owner>/<repo> --state open --json number,title,url,author,state`
-  - Also search by the issue title: `gh search prs "<issue title>" --repo <owner>/<repo> --state open --json number,title,url`
-- If an associated open PR is found, inform the user clearly:
+## Step 3.5: Check for duplicate work and existing pull requests (globally)
+- Compute the canonical workspace path: `WORKSPACE_DIR=~/oss-projects/<owner>-<repo>-issue-<issue-number>`.
+- **Global duplicate detection** (works from any directory, at any depth):
+  - If `WORKSPACE_DIR` already exists **and** contains a git repo (`.git`), this issue has already been checked out before. Inspect it:
+    - `git -C "$WORKSPACE_DIR" log --oneline -5`
+    - `git -C "$WORKSPACE_DIR" branch -a`
+  - Also scan the whole global workspace for any other checkout already working on this issue (older naming, etc.):
+    `ls -d ~/oss-projects/*-issue-<issue-number> 2>/dev/null` and for each hit verify it references `<owner>/<repo>`.
+  - Also query GitHub for PRs that reference the issue (regardless of local state):
+    - `gh search prs "Closes #<issue-number>" "Fixes #<issue-number>" "Resolves #<issue-number>" --repo <owner>/<repo> --state open --json number,title,url,author,state`
+    - Also search by the issue title: `gh search prs "<issue title>" --repo <owner>/<repo> --state open --json number,title,url`
+- **Decision logic**:
+  - If an **open PR already exists** for this issue anywhere: warn the user clearly (see below) and do NOT create a new one automatically.
+  - If `WORKSPACE_DIR` already exists with work/commits: inform the user it was already prepared, and REUSE it rather than re-cloning.
+  - If you find duplicate checkouts of the same issue in the workspace, point the user to the canonical one (`WORKSPACE_DIR`) and avoid creating another copy.
+- Warn format when an open PR exists:
   ```
   Heads up! This issue already has an open pull request:
   https://github.com/<owner>/<repo>/pull/<number> - "<PR title>" by <author>
@@ -88,147 +98,102 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 - Ask the user how to proceed: **"Would you like to (1) work on the issue anyway / coordinate, (2) pick a different issue, or (3) stop?"**
 - If the user chooses a different issue, loop back to Step 3 and ask for a new selection. If they choose to stop, end the workflow.
 
-## Step 4: Clone the repository and handle contribution flow
-- Inside `oss-projects/`, clone the chosen repository.
-- **Before cloning, check contribution rules**:
-  - Look for `CONTRIBUTING.md` or `CONTRIBUTING` in the repo root (fetch from GitHub without cloning first):
-    `curl -sL https://raw.githubusercontent.com/<owner>/<repo>/main/CONTRIBUTING.md | head -200`
-    If that fails, try `/master/` instead of `/main/`.
-  - Also check for these additional contribution-related files:
-    - `CODE_OF_CONDUCT.md` - indicates community standards
-    - `SECURITY.md` - vulnerability reporting process
-    - `.github/PULL_REQUEST_TEMPLATE.md` - PR template requirements
-    - `.github/ISSUE_TEMPLATE/` - issue templates
-    - `DCO` or `DeveloperCertificateOfOrigin` - DCO sign-off requirements
-    - `CLA` or `ContributorLicenseAgreement` - CLA requirements
-  - Read the contribution guide carefully. Extract:
-    - **Forking policy**: does it require forking? (almost always yes for external contributors)
-    - **Branch naming convention**: e.g. `fix/issue-1234`, `feature/...`, `<username>/fix-...`
-    - **Commit message style**: conventional commits? `fix: ...` / `feat: ...`? Must reference issue?
-    - **PR requirements**: signed commits? linked issue? changelog entry? PR template?
-    - **Code style**: linter/formatter to run? (e.g. `npm run lint`, `prettier`, `black`, `gofmt`)
-    - **Testing requirements**: must all tests pass? must add tests?
-    - **CLA/DCO requirements**: is a CLA or DCO sign-off required?
-    - **Review process**: how many approvals needed? review timeline?
-    - **Labels/conventions**: any specific labels to use?
-  - If no CONTRIBUTING.md exists, use these sensible defaults:
-    - Fork the repo
-    - Branch name: `fix/issue-<number>-<short-description>`
-    - Commit messages: conventional commits (`fix: ...`, `feat: ...`) with issue reference
-    - Run linter if config found, ensure tests pass
-- **Present contribution analysis to user**:
-  Display a summary of contribution requirements:
+## Step 4: Ensure the workspace clone (clone or reuse)
+- Ensure the global workspace root exists: `mkdir -p ~/oss-projects`.
+- If `WORKSPACE_DIR` already exists and is a git repo, **reuse it** (do not re-clone). Skip straight to the contribution analysis below, then to the handoff.
+- Otherwise, create it and clone/fork into it:
+  - **Before cloning, check contribution rules**:
+    - Look for `CONTRIBUTING.md` or `CONTRIBUTING` in the repo root (fetch from GitHub without cloning first):
+      `curl -sL https://raw.githubusercontent.com/<owner>/<repo>/main/CONTRIBUTING.md | head -200`
+      If that fails, try `/master/` instead of `/main/`.
+    - Also check for these additional contribution-related files:
+      - `CODE_OF_CONDUCT.md` - indicates community standards
+      - `SECURITY.md` - vulnerability reporting process
+      - `.github/PULL_REQUEST_TEMPLATE.md` - PR template requirements
+      - `.github/ISSUE_TEMPLATE/` - issue templates
+      - `DCO` or `DeveloperCertificateOfOrigin` - DCO sign-off requirements
+      - `CLA` or `ContributorLicenseAgreement` - CLA requirements
+    - Read the contribution guide carefully. Extract (to be passed to `/oss-issue` in the handoff):
+      - **Forking policy**: does it require forking? (almost always yes for external contributors)
+      - **Branch naming convention**: e.g. `fix/issue-1234`, `feature/...`, `<username>/fix-...`
+      - **Commit message style**: conventional commits? `fix: ...` / `feat: ...`? Must reference issue?
+      - **PR requirements**: signed commits? linked issue? changelog entry? PR template?
+      - **Code style**: linter/formatter to run? (e.g. `npm run lint`, `prettier`, `black`, `gofmt`)
+      - **Testing requirements**: must all tests pass? must add tests?
+      - **CLA/DCO requirements**: is a CLA or DCO sign-off required?
+      - **Review process**: how many approvals needed? review timeline?
+      - **Labels/conventions**: any specific labels to use?
+    - If no CONTRIBUTING.md exists, use these sensible defaults:
+      - Fork the repo
+      - Branch name: `fix/issue-<number>-<short-description>`
+      - Commit messages: conventional commits (`fix: ...`, `feat: ...`) with issue reference
+      - Run linter if config found, ensure tests pass
+  - **Present contribution analysis to user**:
+    Display a summary of contribution requirements:
+    ```
+    Contribution Analysis for <owner>/<repo>:
+    ┌─────────────────────────┬─────────────────────────────────────┐
+    │ Requirement             │ Details                             │
+    ├─────────────────────────┼─────────────────────────────────────┤
+    │ Forking Required        │ Yes/No                              │
+    │ Branch Naming           │ <convention>                        │
+    │ Commit Style            │ <style>                             │
+    │ CLA/DCO                 │ Required/Not Required/Unknown       │
+    │ PR Template             │ Yes/No                              │
+    │ Code Style              │ <tools>                             │
+    │ Testing                 │ <requirements>                      │
+    └─────────────────────────┴─────────────────────────────────────┘
+    ```
+  - **Identify Potential Improvements** for the repository's contribution process:
+    - If CONTRIBUTING.md is missing or incomplete
+    - If no CLA/DCO is in place (suggest adding for legal clarity)
+    - If no PR template exists (suggest adding for consistency)
+    - If no issue templates exist (suggest adding for better triage)
+    - If testing requirements are unclear
+    - If code style/linting is not documented
+    Present these as suggestions:
+    ```
+    Potential Improvements for <owner>/<repo>:
+    • [ ] Add CONTRIBUTING.md (currently missing/incomplete)
+    • [ ] Add CLA/DCO for legal clarity
+    • [ ] Add PR template for consistent PR descriptions
+    • [ ] Add issue templates for better triage
+    • [ ] Document testing requirements
+    • [ ] Document code style/linting configuration
+    ```
+  - **Fork or clone based on contribution rules**:
+    - If you have push access OR the repo allows direct branches: `gh repo clone <owner/repo> "$WORKSPACE_DIR"`.
+    - If forking is required (default): first fork via `gh repo fork <owner/repo> --clone=false`, then clone your fork into the workspace:
+      `gh repo clone <your-username>/<repo> "$WORKSPACE_DIR"` (or `git clone https://github.com/<your-username>/<repo>.git "$WORKSPACE_DIR"`)
+    - After cloning your fork, set the upstream remote: `git -C "$WORKSPACE_DIR" remote add upstream https://github.com/<owner>/<repo>.git`
+    - Create a new branch following the repo's naming convention:
+      `git -C "$WORKSPACE_DIR" checkout -b <branch-name>`
+- Confirm the workspace is prepared and note the path.
+
+## Step 5: Hand off to a fresh coding-agent session via `/oss-issue`
+- **Do NOT analyze the codebase, write fixes, or create the PR in this session.** Doing so mixes contexts and confuses the agent. Instead, start a **fresh coding-agent session opened directly on the cloned directory** and pass the issue to `/oss-issue`.
+- Present the handoff:
   ```
-  Contribution Analysis for <owner>/<repo>:
-  ┌─────────────────────────┬─────────────────────────────────────┐
-  │ Requirement             │ Details                             │
-  ├─────────────────────────┼─────────────────────────────────────┤
-  │ Forking Required        │ Yes/No                              │
-  │ Branch Naming           │ <convention>                        │
-  │ Commit Style            │ <style>                             │
-  │ CLA/DCO                 │ Required/Not Required/Unknown       │
-  │ PR Template             │ Yes/No                              │
-  │ Code Style              │ <tools>                             │
-  │ Testing                 │ <requirements>                      │
-  └─────────────────────────┴─────────────────────────────────────┘
+  Workspace ready: ~/oss-projects/<owner>-<repo>-issue-<issue-number>
+  Issue: <issue-url>
+
+  Next: open a new coding-agent session in that directory and run:
+    /oss-issue <issue-url> <workspace-path>
+
+  E.g. /oss-issue https://github.com/<owner>/<repo>/issues/<issue-number> ~/oss-projects/<owner>-<repo>-issue-<issue-number>
   ```
-- **Identify Potential Improvements** for the repository's contribution process:
-  - If CONTRIBUTING.md is missing or incomplete
-  - If no CLA/DCO is in place (suggest adding for legal clarity)
-  - If no PR template exists (suggest adding for consistency)
-  - If no issue templates exist (suggest adding for better triage)
-  - If testing requirements are unclear
-  - If code style/linting is not documented
-  Present these as suggestions:
-  ```
-  Potential Improvements for <owner>/<repo>:
-  • [ ] Add CONTRIBUTING.md (currently missing/incomplete)
-  • [ ] Add CLA/DCO for legal clarity
-  • [ ] Add PR template for consistent PR descriptions
-  • [ ] Add issue templates for better triage
-  • [ ] Document testing requirements
-  • [ ] Document code style/linting configuration
-  ```
-- **Fork or clone based on contribution rules**:
-  - If you have push access OR the repo allows direct branches: clone directly with `gh repo clone <owner/repo>`.
-  - If forking is required (default): first fork via `gh repo fork <owner/repo> --clone=false`, then clone your fork:
-    `gh repo clone <your-username>/<repo>` (or `git clone https://github.com/<your-username>/<repo>.git`)
-  - After cloning your fork, set the upstream remote: `git remote add upstream https://github.com/<owner>/<repo>.git`
-- Navigate into the freshly cloned directory.
-- Create a new branch following the repo's naming convention:
-  `git checkout -b <branch-name>`
-
-## Step 5: Analyse the repository and understand the issue
-- Read the issue description carefully (fetch it via `gh issue view <number> --repo <owner/repo>` or from the stored data).
-- Explore the repository structure: run `tree -L 2` (or `ls -R` if tree not available) and read relevant files.
-- **Identify the core of the problem**: which files are affected, what logic needs to change, any tests that already exist.
-- Note any existing testing framework (Jest, Mocha, Playwright, etc.) and the project's contribution guidelines (look for `CONTRIBUTING.md`).
-
-## Step 6: Suggest fixes and testing instrumentation
-- Formulate a **fix plan** - high-level steps, not full code yet.
-- **Identify the required testing instrumentation**:
-  - If the project is a **web application** (frontend or full-stack), suggest using **Playwright MCP** (or just Playwright) for end-to-end tests.
-  - If the project is a **TUI/CLI application**, suggest using **tmux** or a pseudo-terminal (`pty`) to capture output.
-  - For pure libraries, standard unit tests are enough.
-- **Check if the instrumentation is already set up**:
-  - For Playwright: check if `playwright.config.ts` exists or if `@playwright/test` is in devDependencies.
-  - For tmux: simply check if `tmux` is installed by running `which tmux`.
-  - If missing, **prompt the user** to install/set it up. Example: "This project would benefit from Playwright end-to-end tests. Playwright is not configured. Would you like me to help you install Playwright? (y/n)".
-- Once the user agrees, assist with setup (run `npm init playwright`, install dependencies, etc.).
-
-## Step 7: Present the fix plan and wait for acceptance
-- Compile the fix plan in a clear, actionable list:
-
-  ```
-  Fix plan for expressjs/express#1234:
-  1. Add null check in lib/router.js line 45.
-  2. Update unit test in test/router.test.js to cover edge case.
-  3. Run existing test suite with `npm test`.
-  ```
-- Ask: **"Does this plan look good? Should I proceed? (yes/no)"**
-- Wait for confirmation. If the user says no, allow them to request modifications.
-
-## Step 8: Implement the fix
-- Write the code changes. Keep modifications minimal and focused.
-- Run the code formatter/linter if the project uses one (e.g. `npm run lint`).
-- Implement or update tests according to the fix plan.
-- Execute the tests using the chosen instrumentation:
-  - For unit/integration: `npm test` or the relevant test command.
-  - For Playwright: run `npx playwright test` (you may use the Playwright MCP server if available).
-  - For TUI apps using tmux: start a tmux session, send commands, and capture output (e.g. `tmux send-keys 'myapp' Enter; tmux capture-pane -p`). Verify the expected behaviour.
-- If tests fail, debug and iterate until they pass.
-
-## Step 9: Review and finalisation
-- Show a **summary of changes** (file diffs) to the user.
-- Ask: **"Please review the changes. Ready to create a pull request? (yes/no)"**
-- Once approved, commit the changes with a descriptive message that references the issue (e.g. `fix: prevent memory leak in Router (#1234)`).
-
-## Step 10: Create the pull request
-- Ensure the **GitHub CLI (`gh`)** is installed and authenticated:
-  - Check with `gh auth status`. If it fails, instruct the user to install `gh` (https://cli.github.com/) and run `gh auth login`. Wait until successful.
-- **If you cloned the repo directly (not a fork)**:
-  - Check if you have push access: `gh api repos/<owner>/<repo>/collaborators/<your-username>/permission | jq .permission`
-  - If permission is "admin" or "write", push directly: `git push -u origin <current-branch>`
-  - If not (or if forking was required in Step 4), fork first: `gh repo fork <owner>/<repo> --clone=false`
-  - Add your fork as a remote: `git remote add myfork https://github.com/<your-username>/<repo>.git`
-  - Push: `git push -u myfork <current-branch>`
-- **If you already cloned your fork** (from Step 4):
-  - Push: `git push -u origin <current-branch>`
-- Create the PR against the upstream repo:
-  `gh pr create --title "fix: ..." --body "Closes #<issue-number>.\n\n<brief description of changes>" --base main --head <your-username>:<branch>`
-  - If the upstream uses a different default branch (e.g. `master`, `develop`), target that instead of `main`.
-  - If the repo has a PR template, `gh` will pick it up automatically - review and fill it in.
-- **Apply contribution-guide metadata to the PR** (labels, reviewers, assignees) exactly as determined in Step 4. Note: as an external contributor you usually **cannot** set labels/reviewers/assignees on the upstream repo - only maintainers can. Attempt them anyway but **never fail the workflow** if they're denied; instead inform the user what was and wasn't applied.
-  - **Labels**: If the contribution guide (Step 4) specified labels to add, apply them: `gh pr edit <pr-number> --add-label "label1,label2" --repo <owner>/<repo>`. Otherwise skip - do not invent labels.
-  - **Reviewers**: If the contribution guide explicitly names reviewers, request them: `gh pr edit <pr-number> --add-reviewer <user1,user2> --repo <owner>/<repo>`. Otherwise rely on the repo's automatic mechanisms (e.g. `CODEOWNERS`, auto-assign bots) and do not guess reviewers.
-  - **Assignees**: Assign the issue to yourself as the author (do not assign maintainers to open issues/PRs they triage): `gh issue edit <issue-number> --add-assignee @me --repo <owner>/<repo>`.
-  - **Cross-link the PR**: ensure the PR body references the issue (e.g. `Closes #<issue-number>`) so GitHub links them; if the guide requires a changelog entry or a specific PR description format, honor it.
-- **Verify the PR state** after creation: `gh pr view <pr-number> --repo <owner>/<repo> --json title,labels,reviewRequests,assignees,url`. Report any metadata you could and could not set, and why (e.g. "no permission", "labels not configured in the guide").
-- Display the PR URL to the user.
+- **Start the fresh session** (prefer to launch it for the user so the work continues automatically):
+  - **OpenCode**: open the TUI in the workspace dir with `opencode ~/oss-projects/<owner>-<repo>-issue-<issue-number>`, or run headless with `opencode run --dir ~/oss-projects/<owner>-<repo>-issue-<issue-number> "/oss-issue <issue-url> <workspace-path>"`.
+  - **Claude Code**: `cd ~/oss-projects/<owner>-<repo>-issue-<issue-number> && claude`
+  - **Codex**: `cd ~/oss-projects/<owner>-<repo>-issue-<issue-number> && codex`
+  - **Kimi**: `cd ~/oss-projects/<owner>-<repo>-issue-<issue-number> && kimi`
+- If the current agent cannot launch a nested interactive session, pause and tell the user the exact command to run (above), and ask them to confirm once they've opened the new session in the workspace directory.
+- **Pass along the context**: include the contribution-guide summary from Step 4 (forking policy, branch naming, commit style, CLA/DCO, labels, PR template) so `/oss-issue` can honor it without re-fetching. Include it in the `/oss-issue` prompt or as a short note to the user.
 
 ## Critical rules
-- Always pause and ask for user confirmation before making any irreversible changes (clone, commit, push, PR creation).
-- Never modify files outside the cloned repository directory.
-- Respect the project's existing code style and contribution guidelines.
+- Always pause and ask for user confirmation before any irreversible change (fork, clone, commit, push, PR creation).
+- **Never** clone, create files, or modify anything inside the user's current project directory. All work happens under `~/oss-projects`.
+- **Never** duplicate an issue: the deterministic workspace path and the existing-PR/duplicate checks in Step 3.5 prevent this.
+- Do not analyze, fix, or open a PR from this discovery command - that is the job of the fresh `/oss-issue` session.
 - If any step fails (e.g. search returns no results), inform the user gracefully and suggest trying different keywords.
 [INSTRUCTION END]

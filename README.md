@@ -72,11 +72,12 @@ curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-pl
 Inside your agent chat, type:
 
 ```
-# Search by keywords
+# Phase 1: search for issues (clones to ~/oss-projects, then hands off to /oss-issue)
 /oss-hunter react, typescript, tailwind --limit 10 --sort stars
 
-# Work from a specific issue URL
+# Phase 2: work from a specific issue URL (or point at an existing workspace clone)
 /oss-issue https://github.com/vercel/next.js/issues/84616
+/oss-issue https://github.com/vercel/next.js/issues/84616 ~/oss-projects/vercel-next.js-issue-84616
 ```
 
 **Options for `/oss-hunter`:**
@@ -84,14 +85,9 @@ Inside your agent chat, type:
 - `--sort stars` - sort by repo popularity/stars (default)
 - `--sort updated` - sort by most recently updated
 
-## How it works
-
-1. You provide keywords or a direct issue URL
-2. The agent reads the project's CONTRIBUTING.md to determine fork/branch/commit conventions
-3. The agent clones (or forks + clones) the repository
-4. The codebase is analyzed and a fix plan is proposed
-5. After approval, the agent implements the fix and runs tests
-6. The agent creates a pull request honoring the project's guidelines
+**Arguments for `/oss-issue`:**
+- `<issue-url>` (required) - the GitHub issue to fix
+- `<workspace-path>` (optional) - an already-prepared global workspace clone to reuse instead of re-cloning
 
 ## Prerequisites
 
@@ -101,16 +97,25 @@ Inside your agent chat, type:
 
 ## How it works
 
+OSS Hunter is a **two-phase** flow. Discovery and the actual coding work run in **separate sessions**, so the agent never gets confused by an overloaded context.
+
+**Phase 1 — `/oss-hunter` (discover & handoff)**
 1. You provide keywords and an optional limit
 2. The agent searches for open, beginner-friendly issues matching your keywords
 3. You pick an issue to work on
-4. The agent clones the repository into a dedicated workspace at `~/oss-projects` and analyzes the codebase
-5. **Contribution guide analysis**: The agent fetches and analyzes the repository's contribution requirements
-6. A fix plan is proposed for your review
-7. After approval, the agent implements the fix and runs tests
-8. The agent creates a pull request with your changes
+4. The agent checks for duplicate work and existing pull requests (globally)
+5. The agent clones the repository into a global workspace at `~/oss-projects/<owner>-<repo>-issue-<number>` (or reuses it if already present)
+6. **Contribution guide analysis**: the agent summarizes the repository's contribution requirements
+7. **Handoff**: a fresh coding-agent session is opened directly on the cloned directory, passing the issue URL to `/oss-issue`
 
-> **Workspace location**: All cloned/forked repos are created under `~/oss-projects` (your home directory), never inside your current project — so the tool never nests a git repo inside your own project or messes with your IDE's version control.
+**Phase 2 — `/oss-issue` (fix & PR, run in the fresh session)**
+8. A fix plan is proposed for your review
+9. After approval, the agent implements the fix and runs tests
+10. The agent creates a pull request (honoring contribution guide: labels, reviewers, assignees)
+
+> **Global workspace**: All cloned/forked repos live in `~/oss-projects/<owner>-<repo>-issue-<number>` — never inside your current project. Because the path is derived from the owner, repo, and issue number, the same issue always maps to the same directory. This gives **global deduplication** (no duplicate checkouts, from anywhere in the filesystem) and never nests a git repo inside your own project, so it can't mess with your IDE's version control.
+>
+> **Fresh session per issue**: The coding work happens in a new session opened directly on the clone, so the agent's context is clean and focused only on fixing that one issue. You can also run `/oss-issue <issue-url> <workspace-path>` manually to point at an existing workspace clone.
 
 ### Contribution Guide Analysis
 
