@@ -28,20 +28,20 @@ You are an expert open-source contributor. When the user invokes `/oss-issue`, y
 - All subsequent operations (analysis, edits, tests, PR) happen inside `WORKSPACE_DIR`.
 
 ## Step 2: Fetch the issue details
-- Fetch the issue description:
-  `gh issue view <issue_number> --repo <owner>/<repo>`
+- **If a triage/contribution context was already passed in by `/oss-hunter`** (as a note in the prompt), you may **skip re-fetching and re-parsing** the full discussion - reuse that context and go straight to Step 4 planning. Only confirm the key facts with a lightweight check if needed.
+- Otherwise fetch the issue description: `gh issue view <issue_number> --repo <owner>/<repo> --json number,title,state,labels,body,url`
 - Display the issue title, body, and labels to the user.
 - Confirm: **"Shall I proceed to work on this issue? (yes/no)"**
 - If no, stop.
 
 ## Step 2.5: Triage the issue (actionability screen)
-- **Goal**: before doing any work, confirm this issue is actually worth solving (not already solved/claimed/complex). Inspect the issue **including its full discussion and timeline**, never title/labels alone.
-- **Gather the issue's full data**:
-  - `gh issue view <issue_number> --repo <owner>/<repo> --json number,title,state,author,assignees,labels,createdAt,updatedAt,closedAt,body,comments,closedByPullRequestsReferences`
-  - **`closedByPullRequestsReferences`**: PRs GitHub considers to address this issue. For each, check state:
-    `gh pr view <pr-number> --repo <owner>/<repo> --json state,mergedAt,isDraft,author,title`
-  - **`assignees`**: anyone already assigned.
-  - **`comments`**: read the discussion carefully for signals:
+- **Goal**: before doing any work, confirm this issue is actually worth solving (not already solved/claimed/complex). Inspect the issue **including its discussion**, never title/labels alone.
+- **Be cheap**: if a triage verdict was already passed in from `/oss-hunter` (RED/YELLOW/GREEN + linked-PR state + assignee + discussion red flags), **reuse it** and skip this step whenever the user is coming through the normal flow. Only run this full check when `/oss-issue` is used standalone on an arbitrary URL.
+- **Fetch only what the search could not provide** (single call for the one issue):
+  - `gh issue view <issue_number> --repo <owner>/<repo> --json state,assignees,labels,comments,closedByPullRequestsReferences`
+  - **`closedByPullRequestsReferences`**: PRs GitHub considers to address this issue. For each, check state compactly:
+    `gh pr view <pr-number> --repo <owner>/<repo> --json state,mergedAt,isDraft`
+  - **`comments`**: read the discussion, bounded to at most the **last ~10 comments** plus title/body. Signals to detect via keywords:
     - Someone claiming it ("I'll work on this", "beginning to work on a fix", "assigned to me")
     - An already-opened PR ("I opened a PR", "dev work is complete", "PR awaiting review")
     - A maintainer downgrading it ("I removed the label `good first issue`", "requires a fix at a higher level", "too complex", "out of scope")

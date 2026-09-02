@@ -8,7 +8,7 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
   - **keywords**: a list of languages, frameworks, or topics (e.g. `js`, `typescript`, `react`, `go`)
   - **skills** / **stack**: extract via `--skills <list>` or `--stack <list>` flag (e.g., `--skills react,redux,typescript,antd`).
   - **limit**: use `--limit N` flag, or a bare integer at the end after keywords (e.g. `/oss-hunter js 10`). If not provided, default to **5**. If provided but >25, cap it to **25**.
-  - **sort**: use `--sort stars` or `--sort updated`. If the last bare word after keywords is `stars` or `updated`, treat it as sort mode. Default to **stars** (by repo popularity).
+  - **sort**: use `--sort updated` or `--sort stars`. If the last bare word after keywords is `stars` or `updated`, treat it as sort mode. Default to **updated** (fresh, active issues) — this is the cheapest and best signal for actionability. `stars` (repo popularity) is optional and requires a few extra calls to enrich the final small list.
   Example: `/oss-hunter js, ts, go --limit 20 --sort stars` -> keywords: `js ts go`, limit: 20, sort: stars.
   Example (shorthand): `/oss-hunter js 10 stars` -> keywords: `js`, limit: 10, sort: stars.
   Example (with skills): `/oss-hunter --skills react,redux,typescript,antd --limit 10` -> skills: `react,redux,typescript,antd`, limit: 10.
@@ -31,31 +31,32 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
   - Because this path encodes the owner, repo, and issue number, the same issue always maps to the same directory **no matter where you invoke the command from or how deep you are in the filesystem**. This is the global deduplication mechanism.
 - You will only **find, select, clone, and hand off** in this command. The actual code analysis, fix, and PR creation happen in a **separate, fresh coding-agent session** run by `/oss-issue` directly inside the cloned directory.
 
-## Step 2: Find open issues by keywords
+## Step 2: Find open issues by keywords (one efficient search)
 - Use the **keywords** and active **Skill Profile** to find open, beginner-friendly issues.
 - If no keywords were explicitly provided but a Skill Profile is active, use the terms from the Skill Profile as the search keywords.
-- Combine the search query: search for `"good first issue" OR "help wanted"` and filter for open issues.
-
-  - **If `--sort stars`** (default):
-    First, use `gh search repos` to find popular repos matching the keywords and active skills:
-    `gh search repos "<keywords> <skills>" --sort stars --limit 20 --json nameWithOwner,stargazerCount,primaryLanguage,description`
-    - Filter the repository list to prioritize highly-starred, reputable open-source projects or major ecosystem projects that align with the active Skill Profile (e.g. if the user's stack includes React and Material UI, prioritize repos matching `mui/material-ui`, `facebook/react`, `reduxjs/redux`, `ant-design/ant-design`).
-    - Discard obscure or low-quality personal repos that happen to match the keywords but have very few stars or no activity.
-    - Then for each popular repo, check for open beginner-friendly issues:
-      `gh search issues "good first issue" "help wanted" --repo <owner/repo> --state open --limit 5 --json number,title,url,repository`
-    Collect results until you have enough, prioritizing repos with more stars.
-
-  - **If `--sort updated`**:
-    `gh search issues "good first issue" "help wanted" <keywords> <skills> --state open --limit <limit*2> --json number,title,repository,url,updatedAt,state`
-    Sort results by `updatedAt` descending, and filter the issues to ensure the repository matches the active Skill Profile.
-
-- **Relevancy ranking**: for stars mode, repos are already sorted by popularity. For updated mode, sort by most recent activity. Discard spammy/abandoned repos (no commits in 2+ years, very few stars, suspicious descriptions).
-
+- **This step is a SINGLE GitHub search call** - do NOT use a "find repos, then search each repo" loop, which burns dozens of API calls and quota. One `gh search issues` call already filters `state:open`, labels, and unassigned, and returns cheap prescreen fields inline.
+- Run **one** search:
+  ```
+  gh search issues <keywords...> --label "good first issue" --label "help wanted" --state open --no-assignee --sort updated --order desc --limit <limit> --json number,title,repository,labels,assignees,updatedAt,commentsCount,url
+  ```
+  - `<keywords...>` = the keywords and skill terms (e.g. `react typescript redux`).
+  - `--no-assignee`: excludes issues already claimed by someone - a free, API-level actionability filter. (Still verify linked PRs in triage, since an unassigned issue can still have an open PR.)
+  - `--label "good first issue" --label "help wanted"`: the beginner-friendly markers.
+  - `--sort updated --order desc`: freshest first - recently updated issues are much more likely to be still-open, actionable, and maintained.
+  - The returned `updatedAt`, `commentsCount`, and `assignees` fields let you rank and filter without any extra calls:
+    - Prefer issues updated within the last ~6 months (older = more likely stale).
+    - `assignees` should be empty (enforced by `--no-assignee`, but verify).
+    - Treat very high `commentsCount` (>50) as a caution: could indicate an unresolved flamewar/discussion, not a clean task.
+- **`--sort stars` (optional enrichment)**: GitHub cannot star-sort issues in one call. So if the user explicitly requested `--sort stars`:
+  - Run the single issue search above (limit = 2x desired), then for **only the final candidates you intend to display** (a handful, <= limit), fetch their repo star counts: `gh repo view <owner>/<repo> --json stargazerCount,nameWithOwner`. Re-sort by stars locally. This is a few calls on the final list, NOT per-repo searches.
+- **Relevancy ranking**:
+  - Default (`updated`): order by freshness (recency of `updatedAt`), then prefer well-known/reputable repos; discard suspicious/empty/no-activity repos (check `repository` and, if cheap, the repo description/stars).
+  - `stars`: order by repo popularity.
 - Collect up to **`limit`** distinct issues. Each entry must include:
-  - Repository full name (e.g. `expressjs/express`) with star count
+  - Repository full name (e.g. `expressjs/express`) with star count (if known from enrichment)
   - Issue number and title
   - Issue URL
-  - A short snippet of the issue description
+  - A short snippet of the issue description (can be omitted if not cheaply available - the title and repo are usually enough for selection)
 
 ## Step 3: Present list and let user choose
 - Display the list to the user in a numbered, readable format:
@@ -72,20 +73,20 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
 - Validate the selection and note the chosen repository, issue number, and issue URL.
 
 ## Step 3.5: Triage the issue (actionability screen)
-- **Goal**: never waste the user's first-contribution effort on an issue that is already solved, already claimed, or not actually beginner-friendly. Before recommending or cloning, deeply inspect the issue **including its full discussion and timeline**, and produce a clear verdict.
+- **Goal**: never waste the user's first-contribution effort on an issue that is already solved, already claimed, or not actually beginner-friendly. Before recommending or cloning, deeply inspect the issue **including its discussion**, and produce a clear verdict.
 - Compute the canonical workspace path: `WORKSPACE_DIR=~/oss-projects/<owner>-<repo>-issue-<issue-number>`.
-- **Gather the issue's full data** (this is the critical step - do NOT rely on title/labels alone):
-  - Fetch the issue with all relevant fields:
-    `gh issue view <issue-number> --repo <owner>/<repo> --json number,title,state,author,assignees,labels,createdAt,updatedAt,closedAt,body,comments,closedByPullRequestsReferences`
-  - **`closedByPullRequestsReferences`**: PRs that GitHub considers to address this issue. For each, check its current state:
-    `gh pr view <pr-number> --repo <owner>/<repo> --json state,mergedAt,isDraft,author,title`
-  - **`assignees`**: anyone already assigned to the issue.
-  - **`comments`** (and any timeline/label events): read the **discussion carefully**. Extract signals:
+- **Be cheap**: reuse what Step 2 already returned inline (`assignees`, `labels`, `updatedAt`, `commentsCount`). Only fetch the extra data that the search cannot provide, and **do it once for the single selected issue** (never for every candidate).
+- **Fetch linked PRs and the discussion (one call):**
+  - `gh issue view <issue-number> --repo <owner>/<repo> --json state,assignees,labels,comments,closedByPullRequestsReferences`
+  - **`closedByPullRequestsReferences`**: PRs GitHub considers to address this issue. For each, check its current state compactly (usually 0-2 PRs):
+    `gh pr view <pr-number> --repo <owner>/<repo> --json state,mergedAt,isDraft`
+  - **`comments`**: read the discussion, but stay bounded - examine at most the **last ~10 comments** plus the title/body. Signals to detect (via keywords, not a full deep read):
     - Someone claiming it ("I'll work on this", "beginning to work on a fix", "assigned to me")
-    - An already-opened PR mentioned in comments ("I opened a PR", "dev work is complete", "PR awaiting review")
-    - A maintainer downgrading it ("I removed the label `good first issue` because it requires a fix at a higher level", "too complex for a first contribution", "out of scope")
-    - Staleness ("Is anyone still working on this?", "No activity in N months")
+    - An already-opened PR ("I opened a PR", "dev work is complete", "PR awaiting review")
+    - A maintainer downgrading it ("I removed the label `good first issue`", "requires a fix at a higher level", "too complex", "out of scope")
+    - Staleness ("Is anyone still working on this?", no activity in months)
     - Ambiguity: the body is a question/discussion rather than a concrete, scoped task
+  - If the user already provided the triage result from a prior `/oss-hunter` run (e.g. via handoff note), you may **skip re-fetching** and reuse it.
 - **Evaluate against these rules and assign a verdict**:
   - **RED - do NOT recommend** (stop, pick another issue):
     - A linked PR exists and is **open** (someone is already working on it) → warn with PR URL.
@@ -207,7 +208,7 @@ You are an expert open-source contributor. When the user invokes `/oss-hunter`, 
   - **Codex**: `cd ~/oss-projects/<owner>-<repo>-issue-<issue-number> && codex`
   - **Kimi**: `cd ~/oss-projects/<owner>-<repo>-issue-<issue-number> && kimi`
 - If the current agent cannot launch a nested interactive session, pause and tell the user the exact command to run (above), and ask them to confirm once they've opened the new session in the workspace directory.
-- **Pass along the context**: include the contribution-guide summary from Step 4 (forking policy, branch naming, commit style, CLA/DCO, labels, PR template) so `/oss-issue` can honor it without re-fetching. Include it in the `/oss-issue` prompt or as a short note to the user.
+- **Pass along the context**: include the **triage verdict** from Step 3.5 (RED/YELLOW/GREEN + linked-PR state + assignee + any discussion red flags) and the **contribution-guide summary** from Step 4 (forking policy, branch naming, commit style, CLA/DCO, labels, PR template) so `/oss-issue` can short-circuit its own triage and honor conventions **without re-fetching and re-parsing the whole discussion**. Include them in the `/oss-issue` prompt or as a short note to the user (e.g. in the generated handoff command).
 
 ## Critical rules
 - Always pause and ask for user confirmation before any irreversible change (fork, clone, commit, push, PR creation).

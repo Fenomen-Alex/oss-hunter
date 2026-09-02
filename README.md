@@ -82,8 +82,8 @@ Inside your agent chat, type:
 
 **Options for `/oss-hunter`:**
 - `--limit N` - number of issues to show (default 5, max 25)
-- `--sort stars` - sort by repo popularity/stars (default)
-- `--sort updated` - sort by most recently updated
+- `--sort updated` - sort by most recently updated (default; the cheapest and best actionability signal)
+- `--sort stars` - sort by repo popularity/stars (optional; requires a few extra calls to enrich the final list)
 
 **Arguments for `/oss-issue`:**
 - `<issue-url>` (required) - the GitHub issue to fix
@@ -114,6 +114,8 @@ OSS Hunter is a **two-phase** flow. Discovery and the actual coding work run in 
 10. The agent creates a pull request (honoring contribution guide: labels, reviewers, assignees)
 
 > **Issue triage**: the plugin never trusts the title or labels alone. It inspects the issue's discussion and timeline to rule out issues that are already being handled or solved (open/merged linked PRs, an assignee) and to catch issues that are actually complex despite a `good first issue` label (e.g. a maintainer comment removing the label). This keeps your contribution journey seamless and avoids dead-end work.
+
+> **Efficiency**: the search is a single `gh search issues` call - it filters `state:open`, the beginner-friendly labels, and unassigned issues (`--no-assignee`) at the API level, and returns freshness/comment/assignee signals inline. It does **not** run the expensive "search each repo, then triage every issue" loop, and the discussion triage runs only on the **one issue you select**, bounded to the last ~10 comments. When fixes come up the triage/contribution context is passed forward so `/oss-issue` doesn't re-fetch and re-parse the whole discussion.
 
 > **Global workspace**: All cloned/forked repos live in `~/oss-projects/<owner>-<repo>-issue-<number>` — never inside your current project. Because the path is derived from the owner, repo, and issue number, the same issue always maps to the same directory. This gives **global deduplication** (no duplicate checkouts, from anywhere in the filesystem) and never nests a git repo inside your own project, so it can't mess with your IDE's version control.
 >
