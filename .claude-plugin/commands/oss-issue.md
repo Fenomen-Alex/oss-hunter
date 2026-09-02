@@ -32,24 +32,35 @@ You are an expert open-source contributor. When the user invokes `/oss-issue`, y
 - Confirm: **"Shall I proceed to work on this issue? (yes/no)"**
 - If no, stop.
 
-## Step 2.5: Check for duplicate work and existing pull requests (globally)
-- **Global duplicate detection** (works from any directory, at any depth):
-  - Scan the whole global workspace for any checkout already working on this issue:
-    `ls -d ~/oss-projects/*-issue-<issue_number> 2>/dev/null` and for each hit verify it references `<owner>/<repo>`.
-  - Query GitHub for PRs that reference the issue:
-    - `gh search prs "Closes #<issue_number>" "Fixes #<issue_number>" "Resolves #<issue_number>" --repo <owner>/<repo> --state open --json number,title,url,author,state`
-    - Also search by the issue title: `gh search prs "<issue title>" --repo <owner>/<repo> --state open --json number,title,url`
-- **Decision logic**:
-  - If an **open PR already exists** for this issue anywhere: warn the user and do NOT create a new one automatically.
-  - If `WORKSPACE_DIR` already contains commits/work for this issue, REUSE it rather than re-cloning or forking again.
-  - If you find duplicate checkouts of the same issue in the workspace, use the canonical `WORKSPACE_DIR` and avoid creating another copy.
-- Warn format when an open PR exists:
+## Step 2.5: Triage the issue (actionability screen)
+- **Goal**: before doing any work, confirm this issue is actually worth solving (not already solved/claimed/complex). Inspect the issue **including its full discussion and timeline**, never title/labels alone.
+- **Gather the issue's full data**:
+  - `gh issue view <issue_number> --repo <owner>/<repo> --json number,title,state,author,assignees,labels,createdAt,updatedAt,closedAt,body,comments,closedByPullRequestsReferences`
+  - **`closedByPullRequestsReferences`**: PRs GitHub considers to address this issue. For each, check state:
+    `gh pr view <pr-number> --repo <owner>/<repo> --json state,mergedAt,isDraft,author,title`
+  - **`assignees`**: anyone already assigned.
+  - **`comments`**: read the discussion carefully for signals:
+    - Someone claiming it ("I'll work on this", "beginning to work on a fix", "assigned to me")
+    - An already-opened PR ("I opened a PR", "dev work is complete", "PR awaiting review")
+    - A maintainer downgrading it ("I removed the label `good first issue`", "requires a fix at a higher level", "too complex", "out of scope")
+    - Staleness ("anyone still working?", no activity in months)
+    - Ambiguity: the body is a question/discussion, not a concrete scoped task
+- **Assign a verdict**:
+  - **RED - do NOT proceed**: a linked PR is open (being handled) or merged (already solved); someone is assigned/claimed it; or the body is an open-ended question with no clear task. Warn with the PR URL / assignee and recommend stopping or picking another issue.
+  - **YELLOW - caution**: `good first issue` label removed/absent or a maintainer noted it is not beginner-friendly / under-specified; or stale with no maintainer response. Surface the concern and ask for explicit confirmation.
+  - **GREEN - safe to proceed**: open, unassigned, no linked PR, clear scoped task, no negative signals.
+- **Present the verdict**:
   ```
-  Heads up! This issue already has an open pull request:
-  https://github.com/<owner>/<repo>/pull/<number> - "<PR title>" by <author>
+  Issue Triage for <owner>/<repo>#<issue_number>:
+  Verdict: GREEN / YELLOW / RED
+  • Linked PR: none | #<n> (open|merged) - URL
+  • Assignee: none | <user>
+  • good first issue: present | removed | absent
+  • Discussion signals: <summary>
+  • Actionability: <why it is or is not a good first contribution>
   ```
-- Ask the user how to proceed: **"Would you like to (1) work on the issue anyway / coordinate, or (2) stop?"**
-- If the user chooses to stop, end the workflow. If they proceed, continue.
+- **Decision**: if RED, stop (or proceed only with explicit user consent). If YELLOW, get explicit confirmation. If GREEN, continue.
+- **Global duplicate detection**: scan `ls -d ~/oss-projects/*-issue-<issue_number> 2>/dev/null`, verify each references `<owner>/<repo>`; if the canonical `WORKSPACE_DIR` already has work, REUSE it rather than re-cloning.
 
 ## Step 3: Ensure the workspace clone (clone, fork, or reuse)
 - If `WORKSPACE_DIR` already exists and is a git repo, **reuse it** and skip to Step 4. Reset it to a clean state on the appropriate base if needed (e.g. `git fetch upstream && git checkout <base>`), but do NOT delete other branches or unrelated work.

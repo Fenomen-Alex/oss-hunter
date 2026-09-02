@@ -101,17 +101,19 @@ OSS Hunter is a **two-phase** flow. Discovery and the actual coding work run in 
 
 **Phase 1 — `/oss-hunter` (discover & handoff)**
 1. You provide keywords and an optional limit
-2. The agent searches for open, beginner-friendly issues matching your keywords
+2. The agent searches for open issues matching your keywords
 3. You pick an issue to work on
-4. The agent checks for duplicate work and existing pull requests (globally)
+4. **Issue triage**: the agent reads the issue's full discussion and timeline, detects linked/open/merged PRs, assignees, and signals that the issue is claimed, already solved, or too complex (e.g. a `good first issue` label that was removed), and gives a **RED / YELLOW / GREEN** verdict before you commit to it
 5. The agent clones the repository into a global workspace at `~/oss-projects/<owner>-<repo>-issue-<number>` (or reuses it if already present)
 6. **Contribution guide analysis**: the agent summarizes the repository's contribution requirements
 7. **Handoff**: a fresh coding-agent session is opened directly on the cloned directory, passing the issue URL to `/oss-issue`
 
 **Phase 2 — `/oss-issue` (fix & PR, run in the fresh session)**
-8. A fix plan is proposed for your review
+8. A fix plan is proposed for your review (after re-running the issue triage)
 9. After approval, the agent implements the fix and runs tests
 10. The agent creates a pull request (honoring contribution guide: labels, reviewers, assignees)
+
+> **Issue triage**: the plugin never trusts the title or labels alone. It inspects the issue's discussion and timeline to rule out issues that are already being handled or solved (open/merged linked PRs, an assignee) and to catch issues that are actually complex despite a `good first issue` label (e.g. a maintainer comment removing the label). This keeps your contribution journey seamless and avoids dead-end work.
 
 > **Global workspace**: All cloned/forked repos live in `~/oss-projects/<owner>-<repo>-issue-<number>` — never inside your current project. Because the path is derived from the owner, repo, and issue number, the same issue always maps to the same directory. This gives **global deduplication** (no duplicate checkouts, from anywhere in the filesystem) and never nests a git repo inside your own project, so it can't mess with your IDE's version control.
 >
