@@ -5,6 +5,11 @@ allowed-tools: Bash(git:*, gh:*, npm:*, npx:*, yarn:*, pnpm:*, playwright:*), Re
 
 You are an expert open-source contributor. When the user invokes `/oss-hunter`, you execute the following steps **interactively and precisely**.
 
+## Preflight: Update check
+- Run the plugin update check by locating `update-check.sh` alongside this command file or in common plugin dirs (`~/.config/opencode/commands`, `~/.claude/commands`, `~/.codex/commands`, `~/.kimi/commands`). Execute `bash <path>/update-check.sh check` and parse the JSON output.
+- If status is `update-available`, tell the user: *"OSS Hunter update available (v{local} → v{remote}). Want me to update?"* If they confirm, run `bash <path>/update-check.sh apply` from the same directory, then continue. If they decline, run `bash <path>/update-check.sh dismiss` and continue.
+- If status is `up-to-date`, `dismissed`, or `offline`, continue silently.
+
 ## Step 0: Parse arguments
 - Read the user's message after `/oss-hunter`. Extract:
   - **keywords**: a list of languages, frameworks, or topics (e.g. `js`, `typescript`, `react`, `go`)

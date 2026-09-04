@@ -96,6 +96,32 @@ Inside your agent chat, type:
 - **GitHub CLI (`gh`)** - install from https://cli.github.com, then `gh auth login`
 - **Node.js >= 18** - for most JS/TS projects
 
+## Updates
+
+OSS Hunter checks for updates automatically when you run `/oss-hunter` or `/oss-issue`. If a newer version is available, you'll see a notification like:
+
+```
+OSS Hunter update available (v0.2.0 → v0.3.0). Want me to update?
+```
+
+If you confirm, the plugin re-downloads the latest command files and the update is applied immediately. Your `~/oss-projects` workspace and `~/.config/oss-hunter` history are never touched.
+
+You can also manually check for updates by running:
+```bash
+bash <plugin-dir>/update-check.sh check
+```
+
+Where `<plugin-dir>` is the directory containing the installed plugin files:
+- OpenCode: `~/.config/opencode/commands/`
+- Claude Code: `~/.claude/commands/`
+- Codex CLI: `~/.codex/commands/`
+- Kimi Code: `~/.kimi/commands/`
+
+To dismiss update notifications until the next version, run:
+```bash
+bash <plugin-dir>/update-check.sh dismiss
+```
+
 ## How it works
 
 OSS Hunter is a **two-phase** flow. Discovery and the actual coding work run in **separate sessions**, so the agent never gets confused by an overloaded context.

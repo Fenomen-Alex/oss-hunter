@@ -31,7 +31,7 @@ fetch() {
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 
-# Fetch commands
+# Fetch commands and updater
 fetch ".opencode/plugins/oss-hunter.md"       "$TMPDIR/opencode/oss-hunter.md"
 fetch ".opencode/plugins/oss-issue.md"        "$TMPDIR/opencode/oss-issue.md"
 fetch ".claude-plugin/commands/oss-hunter.md"  "$TMPDIR/claude/oss-hunter.md"
@@ -40,6 +40,8 @@ fetch ".codex-plugin/oss-hunter.md"            "$TMPDIR/codex/oss-hunter.md"
 fetch ".codex-plugin/oss-issue.md"             "$TMPDIR/codex/oss-issue.md"
 fetch ".kimi-plugin/commands/oss-hunter.md"    "$TMPDIR/kimi/oss-hunter.md"
 fetch ".kimi-plugin/commands/oss-issue.md"     "$TMPDIR/kimi/oss-issue.md"
+fetch "update-check.sh"                        "$TMPDIR/update-check.sh"
+fetch "VERSION"                                "$TMPDIR/VERSION"
 
 INSTALLED=()
 command -v opencode &>/dev/null && INSTALLED+=("opencode")
@@ -66,8 +68,12 @@ for agent in "${INSTALLED[@]}"; do
       mkdir -p "$COMMAND_DIR"
       cp "$TMPDIR/opencode/oss-hunter.md" "$COMMAND_DIR/"
       cp "$TMPDIR/opencode/oss-issue.md" "$COMMAND_DIR/"
+      cp "$TMPDIR/update-check.sh" "$COMMAND_DIR/"
+      cp "$TMPDIR/VERSION" "$COMMAND_DIR/"
       echo "  [OK] OpenCode: copied to $COMMAND_DIR/oss-hunter.md"
       echo "  [OK] OpenCode: copied to $COMMAND_DIR/oss-issue.md"
+      echo "  [OK] OpenCode: copied to $COMMAND_DIR/update-check.sh"
+      echo "  [OK] OpenCode: copied to $COMMAND_DIR/VERSION"
       echo ""
       ;;
     claude)
@@ -75,8 +81,12 @@ for agent in "${INSTALLED[@]}"; do
       mkdir -p "$COMMAND_DIR"
       cp "$TMPDIR/claude/oss-hunter.md" "$COMMAND_DIR/"
       cp "$TMPDIR/claude/oss-issue.md" "$COMMAND_DIR/"
+      cp "$TMPDIR/update-check.sh" "$COMMAND_DIR/"
+      cp "$TMPDIR/VERSION" "$COMMAND_DIR/"
       echo "  [OK] Claude Code: copied to $COMMAND_DIR/oss-hunter.md"
       echo "  [OK] Claude Code: copied to $COMMAND_DIR/oss-issue.md"
+      echo "  [OK] Claude Code: copied to $COMMAND_DIR/update-check.sh"
+      echo "  [OK] Claude Code: copied to $COMMAND_DIR/VERSION"
       echo ""
       ;;
     codex)
@@ -84,8 +94,12 @@ for agent in "${INSTALLED[@]}"; do
       mkdir -p "$COMMAND_DIR"
       cp "$TMPDIR/codex/oss-hunter.md" "$COMMAND_DIR/"
       cp "$TMPDIR/codex/oss-issue.md" "$COMMAND_DIR/"
+      cp "$TMPDIR/update-check.sh" "$COMMAND_DIR/"
+      cp "$TMPDIR/VERSION" "$COMMAND_DIR/"
       echo "  [OK] Codex CLI: copied to $COMMAND_DIR/oss-hunter.md"
       echo "  [OK] Codex CLI: copied to $COMMAND_DIR/oss-issue.md"
+      echo "  [OK] Codex CLI: copied to $COMMAND_DIR/update-check.sh"
+      echo "  [OK] Codex CLI: copied to $COMMAND_DIR/VERSION"
       echo ""
       ;;
   esac
@@ -96,5 +110,7 @@ echo "Kimi Code:"
 echo "  mkdir -p ~/.kimi/commands"
 echo "  curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-plugin/commands/oss-hunter.md -o ~/.kimi/commands/oss-hunter.md"
 echo "  curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/.kimi-plugin/commands/oss-issue.md -o ~/.kimi/commands/oss-issue.md"
+echo "  curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/update-check.sh -o ~/.kimi/commands/update-check.sh"
+echo "  curl -sL https://raw.githubusercontent.com/Fenomen-Alex/oss-hunter/main/VERSION -o ~/.kimi/commands/VERSION"
 echo ""
 echo "Done! Restart your agent and try /oss-hunter or /oss-issue."

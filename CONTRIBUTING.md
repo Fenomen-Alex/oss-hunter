@@ -24,6 +24,7 @@ The core prompt (shared across all agent command files) lives in each agent-spec
 
 ## Key behaviors to preserve when editing prompts
 
+- **Update check**: every `/oss-hunter` and `/oss-issue` invocation runs `update-check.sh check` first. If it returns `update-available`, the agent must notify the user and ask before applying. If the user declines, run `update-check.sh dismiss`. Continue silently for `up-to-date`, `dismissed`, or `offline`.
 - **Multi-signal search**: three parallel `gh search issues` calls covering 12+ beginner-friendly labels, plus a semantic fallback for unlabeled issues
 - **Skill verification**: cheaply verify the repo actually uses the user's claimed skills before surfacing issues
 - **Deep discussion analysis**: read the full discussion and timeline, not just the last 10 comments; detect maintainer engagement, claims, PR links, scope changes, and ambiguity

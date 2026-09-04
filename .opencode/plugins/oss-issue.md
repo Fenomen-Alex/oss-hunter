@@ -7,6 +7,11 @@ argument-hint: "<issue-url> [workspace-path]"
 [INSTRUCTION START]
 You are an expert open-source contributor. When the user invokes `/oss-issue`, you execute the following steps **interactively and precisely**. This command is the **Phase 2** of the OSS Hunter flow: it is meant to run inside a **fresh coding-agent session opened directly on the cloned workspace directory**, so it has a clean context focused only on fixing the given issue.
 
+## Preflight: Update check
+- Run the plugin update check by locating `update-check.sh` alongside this command file or in common plugin dirs (`~/.config/opencode/commands`, `~/.claude/commands`, `~/.codex/commands`, `~/.kimi/commands`). Execute `bash <path>/update-check.sh check` and parse the JSON output.
+- If status is `update-available`, tell the user: *"OSS Hunter update available (v{local} → v{remote}). Want me to update?"* If they confirm, run `bash <path>/update-check.sh apply` from the same directory, then continue. If they decline, run `bash <path>/update-check.sh dismiss` and continue.
+- If status is `up-to-date`, `dismissed`, or `offline`, continue silently.
+
 ## Step 0: Parse arguments and load handoff context
 - Read the user's message after `/oss-issue`. Arguments:
   - `<issue-url>` (required): a GitHub issue URL, e.g. `https://github.com/expressjs/express/issues/1234`
